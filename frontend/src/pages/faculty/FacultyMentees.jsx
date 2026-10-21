@@ -1,0 +1,12 @@
+import {useEffect,useMemo,useState} from 'react'
+import api from '../../api/axios'
+import {toFriendlyMessage} from '../../api/errors'
+import {asArray} from '../../api/normalize'
+import {facultyNav} from '../../constants/nav'
+import DashboardLayout from '../../components/DashboardLayout'
+import Loading from '../../components/Loading'
+import ErrorMessage from '../../components/ErrorMessage'
+import EmptyState from '../../components/EmptyState'
+import StatusBadge from '../../components/StatusBadge'
+
+export default function FacultyMentees(){const[mentees,setMentees]=useState([]),[search,setSearch]=useState(''),[loading,setLoading]=useState(true),[error,setError]=useState('');async function load(){setLoading(true);setError('');try{const{data}=await api.get('/faculty/my-mentees');setMentees(asArray(data))}catch(e){setError(toFriendlyMessage(e,'Unable to load your mentees. Please try again.'))}finally{setLoading(false)}}useEffect(()=>{load()},[]);const filtered=useMemo(()=>mentees.filter(s=>!search||[s.name,s.email,s.rollNo,s.branch].some(v=>String(v||'').toLowerCase().includes(search.toLowerCase()))),[mentees,search]);return <DashboardLayout title="My Mentees" navItems={facultyNav}><div className="mx-auto max-w-7xl space-y-6"><div><p className="text-xs font-bold uppercase tracking-[0.18em] text-teal-400">Mentor Group</p><h1 className="mt-2 text-3xl font-bold text-white">My Mentees</h1><p className="mt-2 text-sm text-slate-400">Track academic and placement health of your assigned students.</p></div><div className="modern-card p-4"><input className="modern-input max-w-md" value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search mentees…"/></div>{loading?<Loading label="Loading your mentees…"/>:error?<ErrorMessage message={error} onRetry={load}/>:filtered.length===0?<EmptyState title="No mentees found." hint="Assign students from the Students page."/>:<div className="modern-table-wrapper"><table className="modern-table"><thead><tr><th>Student</th><th>Roll No.</th><th>Branch</th><th>CGPA</th><th>Backlogs</th><th>Approval</th><th>Placement</th></tr></thead><tbody>{filtered.map(s=><tr key={s._id}><td><p className="font-semibold text-white">{s.name}</p><p className="text-xs text-slate-500">{s.email}</p></td><td>{s.rollNo||'—'}</td><td>{s.branch||'—'}</td><td>{s.cgpa??'—'}</td><td>{s.backlogs??0}</td><td><StatusBadge status={s.approved?'Approved':'Pending'}/></td><td><StatusBadge status={s.placed?'Selected':'Not Placed'}/></td></tr>)}</tbody></table></div>}</div></DashboardLayout>}
